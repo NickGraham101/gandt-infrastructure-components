@@ -17,13 +17,13 @@ public sealed class IngressDnsArgs : ResourceArgs {
     [Input("primaryRecordImportId", false)]
     public Input<string> PrimaryRecordImportId { get; set; } = null!;
     [Input("primaryRecordAlias", false)]
-    public Input<Alias> PrimaryRecordAlias { get; set; } = null!;
+    public Input<string> PrimaryRecordAlias { get; set; } = null!;
     [Input("createRootRecord")]
     public Input<bool> CreateRootRecord { get; set; } = null!;
     [Input("rootRecordImportId", false)]
     public Input<string> RootRecordImportId { get; set; } = null!;
     [Input("rootRecordAlias", false)]
-    public Input<Alias> RootRecordAlias { get; set; } = null!;
+    public Input<string> RootRecordAlias { get; set; } = null!;
 }
 
 class IngressDns : ComponentResource {
@@ -59,6 +59,8 @@ class IngressDns : ComponentResource {
         throw new Exception($"Public IP address {args.IpAddressResourceName} not found in resource group {args.IpAddressResourceGroupName}.");
     }
 
+    string primaryAlias = String.Empty;
+    args.PrimaryRecordAlias.Apply(a => primaryAlias = a);
     string primaryImportId = String.Empty;
     args.PrimaryRecordImportId.Apply(r => primaryImportId = r);
     var primaryRecord = new Aws.Route53.Record("primaryRecord", new()
@@ -74,11 +76,13 @@ class IngressDns : ComponentResource {
     },
     new CustomResourceOptions
     {
-        Aliases = args.PrimaryRecordAlias != null ? new List<Input<Alias>>() { args.PrimaryRecordAlias} : new List<Input<Alias>>(),
+        Aliases = { new Alias { Name = primaryAlias } },
         ImportId = primaryImportId,
         Parent = this
     });
 
+    string rootAlias = String.Empty;
+    args.RootRecordAlias.Apply(a => rootAlias = a);
     args.CreateRootRecord.Apply(createRootRecord =>
     {
         if (createRootRecord && args.RootRecordImportId != null)
@@ -98,7 +102,7 @@ class IngressDns : ComponentResource {
             },
             new CustomResourceOptions
             {
-                Aliases = args.RootRecordAlias != null ? new List<Input<Alias>>() { args.RootRecordAlias} : new List<Input<Alias>>(),
+                Aliases = { new Alias { Name = rootAlias } },
                 ImportId = rootImportId,
                 Parent = this
             });
