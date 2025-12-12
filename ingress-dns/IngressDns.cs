@@ -16,10 +16,14 @@ public sealed class IngressDnsArgs : ResourceArgs {
     public Input<string> PrimaryRecordName { get; set; } = null!;
     [Input("primaryRecordImportId", false)]
     public Input<string> PrimaryRecordImportId { get; set; } = null!;
+    [Input("primaryRecordAlias", false)]
+    public Input<Alias> PrimaryRecordAlias { get; set; } = null!;
     [Input("createRootRecord")]
     public Input<bool> CreateRootRecord { get; set; } = null!;
     [Input("rootRecordImportId", false)]
     public Input<string> RootRecordImportId { get; set; } = null!;
+    [Input("rootRecordAlias", false)]
+    public Input<Alias> RootRecordAlias { get; set; } = null!;
 }
 
 class IngressDns : ComponentResource {
@@ -70,6 +74,7 @@ class IngressDns : ComponentResource {
     },
     new CustomResourceOptions
     {
+        Aliases = args.PrimaryRecordAlias != null ? new List<Input<Alias>>() { args.PrimaryRecordAlias} : new List<Input<Alias>>(),
         ImportId = primaryImportId,
         Parent = this
     });
@@ -93,6 +98,7 @@ class IngressDns : ComponentResource {
             },
             new CustomResourceOptions
             {
+                Aliases = args.RootRecordAlias != null ? new List<Input<Alias>>() { args.RootRecordAlias} : new List<Input<Alias>>(),
                 ImportId = rootImportId,
                 Parent = this
             });
