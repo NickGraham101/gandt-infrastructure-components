@@ -14,11 +14,11 @@ public sealed class IngressDnsArgs : ResourceArgs {
     public Input<string> IpAddressResourceName { get; set; } = null!;
     [Input("primaryRecordName")]
     public Input<string> PrimaryRecordName { get; set; } = null!;
-    [Input("primaryRecordImportId")]
+    [Input("primaryRecordImportId", false)]
     public Input<string> PrimaryRecordImportId { get; set; } = null!;
     [Input("createRootRecord")]
     public Input<bool> CreateRootRecord { get; set; } = null!;
-    [Input("rootRecordImportId")]
+    [Input("rootRecordImportId", false)]
     public Input<string> RootRecordImportId { get; set; } = null!;
 }
 
