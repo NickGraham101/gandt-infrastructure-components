@@ -76,7 +76,7 @@ class IngressDns : ComponentResource {
     },
     new CustomResourceOptions
     {
-        Aliases = { new Alias { Name = primaryAlias } },
+        Aliases = { new Alias { Urn = primaryAlias } },
         ImportId = primaryImportId,
         Parent = this
     });
@@ -102,7 +102,7 @@ class IngressDns : ComponentResource {
             },
             new CustomResourceOptions
             {
-                Aliases = { new Alias { Name = rootAlias } },
+                Aliases = { new Alias { Urn = rootAlias } },
                 ImportId = rootImportId,
                 Parent = this
             });
