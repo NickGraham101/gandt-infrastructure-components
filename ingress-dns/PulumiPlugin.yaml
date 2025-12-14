@@ -1,0 +1,3 @@
+name: ingress-dns
+version: 1.0.0
+runtime: dotnet
