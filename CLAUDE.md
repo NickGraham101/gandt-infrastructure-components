@@ -2,6 +2,15 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Repository
+
+**Type:** Public (GitHub)
+**Remote:** `https://github.com/NickGraham101/gandt-infrastructure-components`
+
+**Branch naming:** UpperCamelCase with no separators (e.g. `MyFeatureBranch`).
+
+**Worktrees:** Create in `../gandt-infrastructure-components-worktrees/<branch-name>/` — never inside this directory.
+
 ## What This Project Is
 
 A **Pulumi component plugin** written in C# that provides reusable infrastructure components. Currently contains one component: `IngressDns`, which creates AWS Route53 DNS A records pointing to an Azure Kubernetes Service ingress controller's public IP address.
