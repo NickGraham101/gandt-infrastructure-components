@@ -24,6 +24,8 @@ public sealed class IngressDnsArgs : ResourceArgs {
     public Input<string> RootRecordImportId { get; set; } = null!;
     [Input("rootRecordAlias", false)]
     public Input<string> RootRecordAlias { get; set; } = null!;
+    [Input("ipAddress", false)]
+    public Input<string>? IpAddress { get; set; }
 }
 
 class IngressDns : ComponentResource {
@@ -43,20 +45,32 @@ class IngressDns : ComponentResource {
         Name = zoneName
     });
 
-    InvokeOptions invokeOptions = new InvokeOptions();
-    if (opts != null && opts.Providers.Count > 0)
-        invokeOptions.Provider = opts.Providers.First();
-    Log.Info("Getting public ip address");
-    var publicIpAddress = Azure.Network.GetPublicIPAddress.Invoke(new()
-    {
-        ResourceGroupName = args.IpAddressResourceGroupName,
-        PublicIpAddressName = args.IpAddressResourceName
-    },
-    invokeOptions);
+    Output<string> resolvedIpAddress;
 
-    if (publicIpAddress.Apply(x => x.IpAddress) == null)
+    if (args.IpAddress != null)
     {
-        throw new Exception($"Public IP address {args.IpAddressResourceName} not found in resource group {args.IpAddressResourceGroupName}.");
+        Log.Info("Using provided IP address");
+        resolvedIpAddress = args.IpAddress.ToOutput();
+    }
+    else
+    {
+        InvokeOptions invokeOptions = new InvokeOptions();
+        if (opts != null && opts.Providers.Count > 0)
+            invokeOptions.Provider = opts.Providers.First();
+        Log.Info("Getting public ip address");
+        var publicIpAddress = Azure.Network.GetPublicIPAddress.Invoke(new()
+        {
+            ResourceGroupName = args.IpAddressResourceGroupName,
+            PublicIpAddressName = args.IpAddressResourceName
+        },
+        invokeOptions);
+
+        if (publicIpAddress.Apply(x => x.IpAddress) == null)
+        {
+            throw new Exception($"Public IP address {args.IpAddressResourceName} not found in resource group {args.IpAddressResourceGroupName}.");
+        }
+
+        resolvedIpAddress = publicIpAddress.Apply(x => x.IpAddress!);
     }
 
     string primaryAlias = String.Empty;
@@ -71,7 +85,7 @@ class IngressDns : ComponentResource {
         Ttl = 300,
         Records = new[]
         {
-            publicIpAddress.Apply(x => $"{x.IpAddress}")
+            resolvedIpAddress
         }
     },
     new CustomResourceOptions
@@ -97,7 +111,7 @@ class IngressDns : ComponentResource {
                 Ttl = 300,
                 Records = new[]
                 {
-                    publicIpAddress.Apply(x => $"{x.IpAddress}")
+                    resolvedIpAddress
                 }
             },
             new CustomResourceOptions
