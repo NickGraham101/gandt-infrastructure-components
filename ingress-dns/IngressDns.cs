@@ -28,7 +28,7 @@ public sealed class IngressDnsArgs : ResourceArgs {
     public Input<string>? IpAddress { get; set; }
 }
 
-class IngressDns : ComponentResource {
+public class IngressDns : ComponentResource {
 
     [Output("primaryRecord")]
     public Output<string> primaryRecord { get; private set; }
