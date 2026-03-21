@@ -1,0 +1,52 @@
+name: Linting
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  check-version-bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check component versions are bumped
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+
+          CHANGED_FILES=$(git diff --name-only "${BASE_SHA}...HEAD")
+
+          COMPONENTS=$(find . -maxdepth 2 -name 'PulumiPlugin.yaml' -exec dirname {} \; | sed 's|^\./||')
+
+          FAILED=0
+          for COMPONENT in ${COMPONENTS}; do
+            COMPONENT_CHANGES=$(echo "${CHANGED_FILES}" | grep "^${COMPONENT}/" || true)
+
+            if [ -z "${COMPONENT_CHANGES}" ]; then
+              continue
+            fi
+
+            echo "Component '${COMPONENT}' has changes:"
+            echo "${COMPONENT_CHANGES}"
+
+            CURRENT_VERSION=$(grep '^version:' "${COMPONENT}/PulumiPlugin.yaml" | awk '{print $2}')
+            BASE_VERSION=$(git show "${BASE_SHA}:${COMPONENT}/PulumiPlugin.yaml" 2>/dev/null | grep '^version:' | awk '{print $2}' || echo "")
+
+            if [ -z "${BASE_VERSION}" ]; then
+              echo "  New component — no base version to compare"
+              continue
+            fi
+
+            if [ "${CURRENT_VERSION}" = "${BASE_VERSION}" ]; then
+              echo "::error::Component '${COMPONENT}' has changes but version is still ${CURRENT_VERSION}. Bump the version in ${COMPONENT}/PulumiPlugin.yaml"
+              FAILED=1
+            else
+              echo "  Version bumped: ${BASE_VERSION} -> ${CURRENT_VERSION}"
+            fi
+          done
+
+          if [ "${FAILED}" -eq 1 ]; then
+            exit 1
+          fi
