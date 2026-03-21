@@ -1,0 +1,51 @@
+name: Tag Component
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Tag components with new versions
+        run: |
+          COMPONENTS=$(find . -maxdepth 2 -name 'PulumiPlugin.yaml' -exec dirname {} \; | sed 's|^\./||')
+
+          for COMPONENT in ${COMPONENTS}; do
+            CURRENT_VERSION=$(grep '^version:' "${COMPONENT}/PulumiPlugin.yaml" | awk '{print $2}')
+            PREVIOUS_VERSION=$(git show HEAD~1:"${COMPONENT}/PulumiPlugin.yaml" 2>/dev/null | grep '^version:' | awk '{print $2}' || echo "")
+
+            if [ "${CURRENT_VERSION}" = "${PREVIOUS_VERSION}" ]; then
+              continue
+            fi
+
+            TAG="${COMPONENT}/v${CURRENT_VERSION}"
+
+            if git rev-parse "refs/tags/${TAG}" >/dev/null 2>&1; then
+              echo "Tag '${TAG}' already exists, skipping"
+              continue
+            fi
+
+            PREVIOUS_TAG=$(git tag -l "${COMPONENT}/v*" --sort=-v:refname | head -1)
+
+            git tag "${TAG}"
+            git push origin "${TAG}"
+            echo "Created tag: ${TAG}"
+
+            RELEASE_ARGS=(--title "${COMPONENT} v${CURRENT_VERSION}")
+            if [ -n "${PREVIOUS_TAG}" ]; then
+              RELEASE_ARGS+=(--generate-notes --notes-start-tag "${PREVIOUS_TAG}")
+            else
+              RELEASE_ARGS+=(--notes "Initial release of ${COMPONENT}")
+            fi
+
+            gh release create "${TAG}" "${RELEASE_ARGS[@]}"
+            echo "Created release: ${TAG}"
+          done

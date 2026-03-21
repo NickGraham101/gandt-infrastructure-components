@@ -1,0 +1,62 @@
+name: Auto Bump Version
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize]
+
+permissions:
+  contents: write
+
+jobs:
+  bump-version:
+    if: github.actor == 'dependabot[bot]' || github.actor == 'renovate[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Bump patch version for changed components
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+
+          CHANGED_FILES=$(git diff --name-only "${BASE_SHA}...HEAD")
+
+          COMPONENTS=$(find . -maxdepth 2 -name 'PulumiPlugin.yaml' -exec dirname {} \; | sed 's|^\./||')
+
+          BUMPED=0
+          for COMPONENT in ${COMPONENTS}; do
+            COMPONENT_CHANGES=$(echo "${CHANGED_FILES}" | grep "^${COMPONENT}/" || true)
+
+            if [ -z "${COMPONENT_CHANGES}" ]; then
+              continue
+            fi
+
+            CURRENT_VERSION=$(grep '^version:' "${COMPONENT}/PulumiPlugin.yaml" | awk '{print $2}')
+            BASE_VERSION=$(git show "${BASE_SHA}:${COMPONENT}/PulumiPlugin.yaml" 2>/dev/null | grep '^version:' | awk '{print $2}' || echo "")
+
+            if [ -n "${BASE_VERSION}" ] && [ "${CURRENT_VERSION}" != "${BASE_VERSION}" ]; then
+              echo "Component '${COMPONENT}' version already bumped: ${BASE_VERSION} -> ${CURRENT_VERSION}"
+              continue
+            fi
+
+            IFS='.' read -r MAJOR MINOR PATCH <<< "${CURRENT_VERSION}"
+            NEW_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
+
+            sed -i "s/^version: ${CURRENT_VERSION}/version: ${NEW_VERSION}/" "${COMPONENT}/PulumiPlugin.yaml"
+            echo "Bumped '${COMPONENT}' version: ${CURRENT_VERSION} -> ${NEW_VERSION}"
+            BUMPED=1
+          done
+
+          if [ "${BUMPED}" -eq 1 ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add '*/PulumiPlugin.yaml'
+            git commit -m "Bump component patch versions"
+            git push
+          else
+            echo "No version bumps needed"
+          fi
