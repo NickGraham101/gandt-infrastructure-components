@@ -113,7 +113,7 @@ public class PrimaryRecordTests
 
         _stack = await TestHelpers.CreateStack(program, StackName);
 
-        await _stack.Workspace.InstallPluginAsync("aws", "v7.11.1");
+        await _stack.Workspace.InstallPluginAsync("aws", "v7.23.0");
 
         _upResult = await _stack.UpAsync(new UpOptions
         {
@@ -240,7 +240,7 @@ public class RootRecordTests
 
         _stack = await TestHelpers.CreateStack(program, StackName);
 
-        await _stack.Workspace.InstallPluginAsync("aws", "v7.11.1");
+        await _stack.Workspace.InstallPluginAsync("aws", "v7.23.0");
 
         await _stack.UpAsync(new UpOptions
         {
