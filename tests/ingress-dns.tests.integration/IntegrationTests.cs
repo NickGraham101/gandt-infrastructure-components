@@ -134,6 +134,12 @@ public class PrimaryRecordTests
             await _stack.Workspace.RemoveStackAsync(StackName);
         }
 
+        if (_route53Client != null && _hostedZoneId != null)
+        {
+            await _route53Client.DeleteHostedZoneAsync(
+                new DeleteHostedZoneRequest { Id = _hostedZoneId });
+        }
+
         _route53Client?.Dispose();
     }
 
@@ -259,6 +265,12 @@ public class RootRecordTests
                 OnStandardOutput = Console.WriteLine
             });
             await _stack.Workspace.RemoveStackAsync(StackName);
+        }
+
+        if (_route53Client != null && _hostedZoneId != null)
+        {
+            await _route53Client.DeleteHostedZoneAsync(
+                new DeleteHostedZoneRequest { Id = _hostedZoneId });
         }
 
         _route53Client?.Dispose();
