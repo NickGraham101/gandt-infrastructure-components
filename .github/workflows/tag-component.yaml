@@ -15,12 +15,14 @@ jobs:
           fetch-depth: 0
 
       - name: Tag components with new versions
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
         run: |
           COMPONENTS=$(find . -maxdepth 2 -name 'PulumiPlugin.yaml' -exec dirname {} \; | sed 's|^\./||')
 
           for COMPONENT in ${COMPONENTS}; do
             CURRENT_VERSION=$(grep '^version:' "${COMPONENT}/PulumiPlugin.yaml" | awk '{print $2}')
-            PREVIOUS_VERSION=$(git show HEAD~1:"${COMPONENT}/PulumiPlugin.yaml" 2>/dev/null | grep '^version:' | awk '{print $2}' || echo "")
+            PREVIOUS_VERSION=$(git show "${BEFORE_SHA}:${COMPONENT}/PulumiPlugin.yaml" 2>/dev/null | grep '^version:' | awk '{print $2}' || echo "")
 
             if [ "${CURRENT_VERSION}" = "${PREVIOUS_VERSION}" ]; then
               continue
