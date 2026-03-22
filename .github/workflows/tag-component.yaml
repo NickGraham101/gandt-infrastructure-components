@@ -17,6 +17,7 @@ jobs:
       - name: Tag components with new versions
         env:
           BEFORE_SHA: ${{ github.event.before }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           COMPONENTS=$(find . -maxdepth 2 -name 'PulumiPlugin.yaml' -exec dirname {} \; | sed 's|^\./||')
 
