@@ -19,6 +19,9 @@ jobs:
           BEFORE_SHA: ${{ github.event.before }}
           GH_TOKEN: ${{ github.token }}
         run: |
+          # Tags are plain "vX.Y.Z" at the repo root, not "<component>/vX.Y.Z". Pulumi's git-based package installer
+          # (`packages:` in a consumer's Pulumi.yaml, `pulumi package add host/org/repo.git/path@version`)
+          # only ever resolves refs/tags/v<version> — it ignores any component prefix
           COMPONENTS=$(find . -maxdepth 2 -name 'PulumiPlugin.yaml' -exec dirname {} \; | sed 's|^\./||')
 
           for COMPONENT in ${COMPONENTS}; do
@@ -29,14 +32,14 @@ jobs:
               continue
             fi
 
-            TAG="${COMPONENT}/v${CURRENT_VERSION}"
+            TAG="v${CURRENT_VERSION}"
 
             if git rev-parse "refs/tags/${TAG}" >/dev/null 2>&1; then
               echo "Tag '${TAG}' already exists, skipping"
               continue
             fi
 
-            PREVIOUS_TAG=$(git tag -l "${COMPONENT}/v*" --sort=-v:refname | head -1)
+            PREVIOUS_TAG=$(git tag -l "v*" --sort=-v:refname | head -1)
 
             git tag "${TAG}"
             git push origin "${TAG}"
