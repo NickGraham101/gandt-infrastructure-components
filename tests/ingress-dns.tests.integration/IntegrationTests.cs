@@ -293,3 +293,90 @@ public class RootRecordTests
             "Should have both primary and root A records");
     }
 }
+
+[TestFixture]
+public class CreateFromNothingTests
+{
+    private const string TestZoneName = "create-from-nothing-test.com";
+    private const string TestIpAddress = "10.0.0.3";
+    private const string StackName = "create-from-nothing";
+
+    private AmazonRoute53Client _route53Client = null!;
+    private string _hostedZoneId = null!;
+    private WorkspaceStack _stack = null!;
+
+    [OneTimeSetUp]
+    public async Task Setup()
+    {
+        _route53Client = TestHelpers.CreateRoute53Client();
+
+        _hostedZoneId = await TestHelpers.CreateHostedZone(
+            _route53Client, TestZoneName);
+
+        var program = PulumiFn.Create(() =>
+        {
+            var dns = new IngressDns("create-from-nothing-test", new IngressDnsArgs
+            {
+                ZoneName = TestZoneName,
+                IpAddressResourceGroupName = "unused",
+                IpAddressResourceName = "unused",
+                IpAddress = TestIpAddress,
+                PrimaryRecordName = "blog",
+                CreateRootRecord = true
+            });
+
+            return new Dictionary<string, object?>
+            {
+                ["primaryRecord"] = dns.primaryRecord
+            };
+        });
+
+        _stack = await TestHelpers.CreateStack(program, StackName);
+
+        await _stack.Workspace.InstallPluginAsync("aws", "v7.23.0");
+
+        await _stack.UpAsync(new UpOptions
+        {
+            OnStandardOutput = Console.WriteLine,
+            OnStandardError = Console.Error.WriteLine
+        });
+    }
+
+    [OneTimeTearDown]
+    public async Task Teardown()
+    {
+        if (_stack != null)
+        {
+            await _stack.DestroyAsync(new DestroyOptions
+            {
+                OnStandardOutput = Console.WriteLine
+            });
+            await _stack.Workspace.RemoveStackAsync(StackName);
+        }
+
+        if (_route53Client != null && _hostedZoneId != null)
+        {
+            await _route53Client.DeleteHostedZoneAsync(
+                new DeleteHostedZoneRequest { Id = _hostedZoneId });
+        }
+
+        _route53Client?.Dispose();
+    }
+
+    [Test]
+    public async Task BothRecordsCreatedWithNoImportIdOrAlias()
+    {
+        var response = await _route53Client.ListResourceRecordSetsAsync(
+            new ListResourceRecordSetsRequest
+            {
+                HostedZoneId = _hostedZoneId
+            });
+
+        var aRecords = response.ResourceRecordSets
+            .Where(r => r.Type == RRType.A)
+            .ToList();
+
+        Assert.That(aRecords, Has.Count.EqualTo(2),
+            "Both primary and root A records should be created from nothing, with no import id or alias supplied");
+    }
+}
