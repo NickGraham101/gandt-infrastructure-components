@@ -95,4 +95,15 @@ public class IngressDnsTests
         var recordValues = await record.Records.GetValueAsync();
         Assert.That(recordValues, Does.Contain("5.6.7.8"));
     }
+
+    [Test]
+    public async Task RootRecordCreatedWhenFlagIsTrueAndNoImportIdSupplied()
+    {
+        var mocks = new Mocks();
+        var resources = await TestHelpers.RunAsync<NewRootRecordStack>(mocks);
+
+        var records = resources.OfType<Aws.Route53.Record>().ToList();
+        Assert.That(records, Has.Count.EqualTo(2),
+            "Root record must still be created when CreateRootRecord is true, even with no import id to adopt");
+    }
 }

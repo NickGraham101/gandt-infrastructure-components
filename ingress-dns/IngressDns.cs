@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Pulumi;
 using Aws = Pulumi.Aws;
 using Azure = Pulumi.AzureNative;
+
+[assembly: InternalsVisibleTo("ingress-dns.tests.unit")]
 
 public sealed class IngressDnsArgs : ResourceArgs {
     [Input("zoneName")]
@@ -88,18 +91,13 @@ public class IngressDns : ComponentResource {
             resolvedIpAddress
         }
     },
-    new CustomResourceOptions
-    {
-        Aliases = { new Alias { Urn = primaryAlias } },
-        ImportId = primaryImportId,
-        Parent = this
-    });
+    BuildRecordOptions(this, primaryAlias, primaryImportId));
 
     string rootAlias = String.Empty;
     args.RootRecordAlias.Apply(a => rootAlias = a);
     args.CreateRootRecord.Apply(createRootRecord =>
     {
-        if (createRootRecord && args.RootRecordImportId != null)
+        if (createRootRecord)
         {
             string rootImportId = String.Empty;
             args.RootRecordImportId.Apply(r => rootImportId = r);
@@ -114,12 +112,7 @@ public class IngressDns : ComponentResource {
                     resolvedIpAddress
                 }
             },
-            new CustomResourceOptions
-            {
-                Aliases = { new Alias { Urn = rootAlias } },
-                ImportId = rootImportId,
-                Parent = this
-            });
+            BuildRecordOptions(this, rootAlias, rootImportId));
         }
         return createRootRecord;
     });
@@ -129,5 +122,24 @@ public class IngressDns : ComponentResource {
     this.RegisterOutputs(new Dictionary<string, object?> {
         ["primaryRecord"] = primaryRecord.Fqdn
     });
+    }
+
+    // A brand-new record has no prior state, so an empty import id or alias must be omitted from CustomResourceOptions entirely
+    // rather than passed through as "".
+    internal static CustomResourceOptions BuildRecordOptions(ComponentResource? parent, string? alias, string? importId)
+    {
+        var options = new CustomResourceOptions { Parent = parent };
+
+        if (!String.IsNullOrEmpty(alias))
+        {
+            options.Aliases.Add(new Alias { Urn = alias });
+        }
+
+        if (!String.IsNullOrEmpty(importId))
+        {
+            options.ImportId = importId;
+        }
+
+        return options;
     }
 }

@@ -53,3 +53,18 @@ class IpAddressOverrideStack : Stack
         });
     }
 }
+
+class NewRootRecordStack : Stack
+{
+    public NewRootRecordStack()
+    {
+        var dns = new IngressDns("test", new IngressDnsArgs
+        {
+            ZoneName = "test.com",
+            IpAddressResourceGroupName = "test-rg",
+            IpAddressResourceName = "test-ip",
+            PrimaryRecordName = "www",
+            CreateRootRecord = true
+        });
+    }
+}
